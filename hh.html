@@ -1,0 +1,260 @@
+<?php
+include('dynamic.php');
+
+ function convert_day_to_YMD($convert)
+     {
+     			
+   // $convert = '5000'; // days you want to convert
+
+		$years = ($convert / 365) ; // days / 365 days
+		$years = floor($years); // Remove all decimals
+
+		$month = ($convert % 365) / 30.5; // I choose 30.5 for Month (30,31) ;)
+		$month = floor($month); // Remove all decimals
+
+		$days = ($convert % 365) % 30.5; // the rest of days
+
+		// Echo all information set
+		//echo 'DAYS RECEIVE : '.$convert.' days<br>';
+		$str="";
+		if($years>0)
+		{
+			$str.= "$years years - ";
+		}
+		if($month>0)
+		{
+			$str.= "$month months - ";
+		}
+		$str.=$days.' days';
+echo $str;
+     }
+
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<html lang="en">
+<head>
+
+<?php include('_header.php'); ?>
+  <script src="../js1.3/script.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css">
+  
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js"></script>
+
+  
+  <script language="JavaScript" type="text/javascript">
+
+
+		</script>
+  
+<script language="JavaScript" type="text/javascript">
+$(document).ready(function(){
+	 $('#tb_id,#tb_id1,#tb_id2').DataTable({
+		 "pageLength": 5,
+		"lengthChange": false,
+		"pagingType": 'simple'
+	 });
+	//runEffect("#effect","bounce")
+});	
+</script>
+  <?php include('_menu.php');?>
+
+
+	
+		 <div id="row_wrap">
+		 
+		<!--  <div class="col-sm-12 no_border" style="padding-bottom:0%;margin-bottom:0%;">
+		 <H2><CENTER>COMING SOON</CENTER></H2>
+		 </div> -->
+		 
+		 <div class="col-sm-12 no_border" style="padding-bottom:0%;margin-bottom:0%;">
+		
+		 <div class="row">
+		 	<div class="col-sm-5">
+		 				
+			<h4>Stock Status</h4>
+			
+			<h5><b>Low Stock List</b></h5>
+			
+		<div id="table-responsive" class="scrollbards">
+		<table border="0"  id="tb_id1" style="background:#!important;border-radius:5px;" width="100%" >
+			<thead>
+				
+			
+		<tr >
+		<th align="left"><b>ITEM NAME </b></th>
+
+		<th  align="left"><b>STOCK COUNT</b></th> 
+		<th  align="center"><b>MIN COUNT</b></th>
+	</tr>
+		</thead>
+		<tbody>
+			
+		
+		<?php
+		
+
+
+		$item_stock="SELECT item_master.item_name,item_master.reorder_qty,sum(warehouse_qty.qty) as qty,warehouse_qty.w_id from item_master INNER join warehouse_qty on warehouse_qty.item_id=item_master.item_id group by item_master.item_id	
+					" ;
+$result_item_stock=RunQry($item_stock);
+$rows=mysqli_num_rows($result_item_stock);
+$j=1;
+
+while($stck=mysqli_fetch_array($result_item_stock))
+{
+$x=$stck['qty'];
+$y=$stck['reorder_qty'];
+if($x<=$y)
+{
+
+
+?>
+<tr>
+	
+	<td  align="left"><?php echo $stck['item_name'];?></td>
+	<td  align="left"><font color="red"><?php echo $stck['qty'];?></font></td>
+	<td  align="center"><font color="red"><?php echo $stck['reorder_qty'];?></font></td>
+	</tr>
+<?php 
+
+}
+
+$j++;
+} 
+?>
+</tbody>
+</table>
+			</div>
+		 	</div>
+		 	<div class="col-sm-5">
+		 		<table>
+		 			
+		 		
+		 		<?php
+		
+		$order_details="SELECT count(invoice_master.inv_id) as order_count,occasion_master.o_name
+						from invoice_master 
+						inner join occasion_master on
+						occasion_master.o_id=invoice_master.occasion where invoice_master.order_status='2' group by invoice_master.occasion" ;
+$result_order_details=RunQry($order_details);
+$rows=mysqli_num_rows($result_order_details);
+$i=1;
+$ptotal=0;
+while($odata=mysqli_fetch_array($result_order_details))
+{
+?>
+<thead>
+	
+
+<tr>
+	
+	<th  align="center"><?php echo $odata['o_name'];?></th>
+	<th  align="center"><font color="red"><?php echo $odata['order_count'];?></font></th>
+	</tr>
+</thead>
+<?php $i++;
+
+$ptotal+=$odata['order_count'];
+} 
+?>
+<h5><b>Total Orders: <font color="red"><?php echo$ptotal;?></font></b></h5>
+		</table>
+		<br>
+		 	</div>
+		 </div>
+		  <div class="row">
+		 	<div class="col-sm-5">
+		 			<h4>Pending Details</h4>
+			
+			<table  border="0" id="tb_id2" cellpadding="3" cellspacing="3" style="background:#!important;border-radius:5px;" width="100%" >
+				<thead>
+					
+				
+		<tr >
+			<th align="center"><b>Order No </b></th>
+			<th  align="center"><b>Pending Amount</b></th>
+			<th align="center"><b>Pending Since</b></th>
+			<th align="center"><b>Edit</b></th>
+		</tr>
+	</thead>
+	<tbody>
+		
+	
+		<?php
+			$table="select O.inv_id,O.inv_no,O.grand_ttl - COALESCE(SUM(PR.pay_rec_amount),0.0) as pending_amt ,DATEDIFF(CURDATE(),O.occasion_date) AS DiffDate from invoice_master O
+				left join payment_receipt_master PR  on
+				O.inv_id=PR.os_id group by O.inv_id order by O.inv_id asc";
+				$res=RunQry($table);
+				;
+				while ($row=mysqli_fetch_row($res)) {
+					if(($row[2]>0)&&($row[3]>0))
+					{
+						echo"<tr>
+						<td align='center'>$row[1]</td>
+						<td align='center'>$row[2]</td>
+						<td align='center'>
+						";
+						convert_day_to_YMD($row[3]);
+						echo"</td><td>
+						<a href='order_form_edit.php?mode=E&id=$row[0] '>".IMG_EDIT."</a></td>
+					</tr>";
+					}
+					
+				}
+			?>
+			</tbody>
+	</table>
+			
+		 	</div>
+		 	<div class="col-sm-5">
+		 			<h4>UpComing Orders for Week</h4>
+					<table border="0"  id="tb_id"  cellpadding="3" cellspacing="3" style="background:#!important;border-radius:5px;" width="100%" >
+						<thead>
+							
+						
+		<tr >
+			<th align="center"><b>Order No </b></th>
+			
+			<th align="center"><b>Days To Go</b></th>
+		</tr>
+	</thead>
+	<tbody>
+		<?php
+			$table="select O.inv_id,O.inv_no,DATEDIFF(CURDATE(),O.occasion_date) AS DiffDate from invoice_master O where O.order_status=4 order by O.inv_id asc";
+				$res=RunQry($table);
+				;
+				while ($row=mysqli_fetch_row($res)) {
+					if(($row[2]>=-7)&&($row[2]<=0))
+					{
+						echo"<tr>
+						
+						<td align='center'>$row[1]</td>
+						<td align='center'>".-$row[2]."</td>
+					</tr>";
+					}
+					
+				}
+			?>
+			</tbody>
+	</table>
+		 	</div>
+		 </div>
+		 </div>
+		 
+  </div>
+  </div>
+  </div>
+  
+  
+ <?php include('_footer.php'); ?>
+  
+
+  
+</div>
+
+
+</body>
+</html>
